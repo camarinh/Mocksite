@@ -1,0 +1,299 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Static Website Mock Demo</title>
+  <style>
+    :root{
+      --bg:#0f172a;
+      --panel:#111827;
+      --muted:#94a3b8;
+      --line:#334155;
+      --accent:#2563eb;
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      font-family:Inter,Segoe UI,Arial,sans-serif;
+      background:linear-gradient(180deg,#0b1220,#0f172a);
+      color:#e5e7eb;
+      min-height:100vh;
+    }
+
+    /* Top bar always visible */
+    .topbar{
+      position:sticky;
+      top:0;
+      z-index:1000;
+      display:flex;
+      align-items:center;
+      gap:10px;
+      padding:10px 12px;
+      background:rgba(17,24,39,.96);
+      border-bottom:1px solid #1f2937;
+      backdrop-filter: blur(4px);
+    }
+    .title{
+      font-size:14px;
+      color:var(--muted);
+      margin-right:auto;
+      white-space:nowrap;
+      overflow:hidden;
+      text-overflow:ellipsis;
+      max-width:45vw;
+    }
+    .btn{
+      height:34px;
+      border:none;
+      border-radius:8px;
+      padding:0 12px;
+      background:var(--accent);
+      color:#fff;
+      cursor:pointer;
+      font-size:13px;
+      font-weight:600;
+    }
+    .btn:hover{filter:brightness(1.08)}
+    .btn.secondary{
+      background:#334155;
+    }
+
+    .status{
+      padding:8px 12px;
+      color:var(--muted);
+      font-size:13px;
+    }
+
+    .stage-wrap{
+      padding:12px;
+      display:flex;
+      justify-content:center;
+    }
+
+    /* Main canvas */
+    .stage{
+      width:min(1400px,96vw);
+      aspect-ratio:16/10;
+      border:1px solid var(--line);
+      border-radius:12px;
+      overflow:hidden;
+      position:relative;
+      background:#0b1220;
+      box-shadow:0 10px 30px rgba(0,0,0,.35);
+    }
+
+    /* Uploaded screenshot background (non interactive) */
+    #bgImage{
+      position:absolute;
+      inset:0;
+      width:100%;
+      height:100%;
+      object-fit:contain;
+      background:#0b1220;
+      user-select:none;
+      pointer-events:none;
+      display:none;
+    }
+
+    /* Empty-state hint */
+    .hint{
+      position:absolute;
+      inset:0;
+      display:grid;
+      place-items:center;
+      color:#94a3b8;
+      text-align:center;
+      padding:20px;
+      font-size:14px;
+    }
+
+    /* Overlay layer for widget(s) */
+    .overlay{
+      position:absolute;
+      inset:0;
+      pointer-events:none;
+    }
+
+    /* Placeholder chat widget (draggable) */
+    .widget{
+      position:absolute;
+      right:24px;
+      bottom:24px;
+      width:320px;
+      border-radius:12px;
+      overflow:hidden;
+      border:1px solid #334155;
+      box-shadow:0 10px 25px rgba(0,0,0,.35);
+      background:#fff;
+      color:#111827;
+      pointer-events:auto;
+    }
+    .widget-header{
+      background:#0ea5e9;
+      color:#fff;
+      padding:10px 12px;
+      font-weight:600;
+      cursor:move;
+      user-select:none;
+      font-size:14px;
+    }
+    .widget-body{
+      padding:12px;
+      font-size:13px;
+      line-height:1.4;
+    }
+
+    .footer-note{
+      padding:2px 12px 12px;
+      color:#64748b;
+      font-size:12px;
+    }
+
+    input[type="file"]{
+      display:none;
+    }
+  </style>
+</head>
+<body>
+  <div class="topbar">
+    <div class="title">Static Website Mock Demo</div>
+
+    <input id="fileInput" type="file" accept="image/png,image/jpeg,image/webp,image/gif" />
+    <button class="btn" id="uploadBtn">Upload Screenshot</button>
+    <button class="btn secondary" id="clearBtn">Clear</button>
+    <button class="btn secondary" id="toggleWidgetBtn">Toggle Widget</button>
+    <button class="btn secondary" id="resetWidgetBtn">Reset Widget</button>
+  </div>
+
+  <div class="status" id="status">Upload a screenshot to begin.</div>
+
+  <div class="stage-wrap">
+    <div class="stage" id="stage">
+      <img id="bgImage" alt="Uploaded website screenshot" />
+      <div class="hint" id="hint">
+        <div>
+          <strong>No screenshot loaded yet.</strong><br/>
+          Click <em>Upload Screenshot</em> in the top bar.
+        </div>
+      </div>
+
+      <div class="overlay">
+        <!-- ========================================================= -->
+        <!-- REPLACE THIS PLACEHOLDER WITH YOUR REAL WEBEX WIDGET CODE -->
+        <!-- When ready, remove the <div id="widget"...> block below   -->
+        <!-- and paste your widget snippet/script in this overlay area. -->
+        <!-- Keep it inside .overlay so it appears on top of screenshot -->
+        <!-- ========================================================= -->
+        <div class="widget" id="widget">
+          <div class="widget-header">Web Chat (Placeholder)</div>
+          <div class="widget-body">
+            This is a placeholder widget.<br/>
+            You can drag it around for your demo.
+          </div>
+        </div>
+        <!-- ===================== END REPLACE AREA =================== -->
+      </div>
+    </div>
+  </div>
+
+  <div class="footer-note">
+    Tip: Use full-page browser screenshots for best visual results.
+  </div>
+
+  <script>
+    const fileInput = document.getElementById("fileInput");
+    const uploadBtn = document.getElementById("uploadBtn");
+    const clearBtn = document.getElementById("clearBtn");
+    const toggleWidgetBtn = document.getElementById("toggleWidgetBtn");
+    const resetWidgetBtn = document.getElementById("resetWidgetBtn");
+    const bgImage = document.getElementById("bgImage");
+    const hint = document.getElementById("hint");
+    const statusEl = document.getElementById("status");
+
+    const widget = document.getElementById("widget");
+    const widgetHeader = widget ? widget.querySelector(".widget-header") : null;
+
+    function setStatus(msg, isError=false){
+      statusEl.textContent = msg;
+      statusEl.style.color = isError ? "#fca5a5" : "#94a3b8";
+    }
+
+    uploadBtn.addEventListener("click", () => fileInput.click());
+
+    fileInput.addEventListener("change", (e) => {
+      const file = e.target.files && e.target.files[0];
+      if (!file) return;
+
+      if (!file.type.startsWith("image/")) {
+        setStatus("Please upload a valid image file.", true);
+        return;
+      }
+
+      const reader = new FileReader();
+      reader.onload = () => {
+        bgImage.src = reader.result;
+        bgImage.style.display = "block";
+        hint.style.display = "none";
+        setStatus(`Loaded: ${file.name}`);
+      };
+      reader.onerror = () => setStatus("Could not read the image file.", true);
+      reader.readAsDataURL(file);
+    });
+
+    clearBtn.addEventListener("click", () => {
+      bgImage.src = "";
+      bgImage.style.display = "none";
+      hint.style.display = "grid";
+      fileInput.value = "";
+      setStatus("Cleared. Upload another screenshot.");
+    });
+
+    if (widget) {
+      toggleWidgetBtn.addEventListener("click", () => {
+        widget.style.display = widget.style.display === "none" ? "block" : "none";
+      });
+
+      resetWidgetBtn.addEventListener("click", () => {
+        widget.style.left = "auto";
+        widget.style.top = "auto";
+        widget.style.right = "24px";
+        widget.style.bottom = "24px";
+      });
+
+      // Simple drag support
+      let dragging = false;
+      let offsetX = 0;
+      let offsetY = 0;
+
+      widgetHeader.addEventListener("mousedown", (e) => {
+        dragging = true;
+        const rect = widget.getBoundingClientRect();
+        offsetX = e.clientX - rect.left;
+        offsetY = e.clientY - rect.top;
+
+        widget.style.left = rect.left + "px";
+        widget.style.top = rect.top + "px";
+        widget.style.right = "auto";
+        widget.style.bottom = "auto";
+      });
+
+      window.addEventListener("mousemove", (e) => {
+        if (!dragging) return;
+        widget.style.left = (e.clientX - offsetX) + "px";
+        widget.style.top = (e.clientY - offsetY) + "px";
+      });
+
+      window.addEventListener("mouseup", () => {
+        dragging = false;
+      });
+    } else {
+      // If you remove placeholder and add your own widget, these buttons may not apply
+      toggleWidgetBtn.disabled = true;
+      resetWidgetBtn.disabled = true;
+      setStatus("Screenshot ready. Custom widget mode enabled.");
+    }
+  </script>
+  <div id="divicw" data-bind="1F42F4B9-0EDA-4FC0-B22D-5A145FE73100" data-org="" data-guid="6a74adb6-2b9a-4bc1-810b-acc6333cc8bf"></div><script>{3}var i={t:function(){try{var e=document.getElementById("divicw"),t=document.createElement("script");t.src="https://media.imi.chat/widget/js/imichatinit.js?t="+new Date().toISOString(),e.insertAdjacentElement("afterend",t),t.addEventListener("load",function(){console.log(new Date().toISOString(),"Livechat script loaded successfully!")}),t.addEventListener("error",function(){console.log(new Date().toISOString(),"Error loading Livechat script");i.o(e)})}catch(e){console.error(e)}},o:function(e){e.insertAdjacentHTML("afterend",'<iframe id="tls_al_frm" frameborder="0" style="overflow:hidden;height:208px;width:394px;position:fixed;display:block;right:48px;bottom:12px;z-index:99999;display:none;"></iframe>');var t=document.getElementById("tls_al_frm"),n=t.contentWindow,d=n.document;d.open();d.write("<!doctype html><html><head><meta charset='utf-8'><title>Untitled Document</title><style>body{font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;color:#99a0b0;font-size:14px}.popover__content{background-color:#fbfbfe;padding:1.5rem;border-radius:5px;width:300px;box-shadow:0 2px 5px 0 rgba(0,0,0,0.26);position:relative}.popover__message{font-weight:600;color:#56627c;font-size:16px}.pull-left{float:left}.clearfix{clear:both}.hdr-txt{width:218px;margin-top:3px}.para-txt a{text-decoration:none;color:#005cde}.close-btn{position:absolute;right:15px;top:15px}.close-btn a{text-decoration:none;font-weight:400;color:#56627c;font-size:16px}</style></head><body><div class='popover__content'><div class='close-btn'><a href='#' onclick='closeTLSAlert()'>X</a></div><div class='popover__message'><div class='pull-left hdr-txt'>This browser version is not supported on LiveChat.</div></div><div class='clearfix'></div><p class='para-txt'>Please update your browser to the latest version and re-open the website to access the widget.</p></div><script>function closeTLSAlert(){window.parent.postMessage({key:'close_tls_alert',value:'close_tls_alert',action:'close_tls_alert'},'*');}<\/script></body></html>");d.close();t.style.display='block';window.addEventListener('message',function(e){'close_tls_alert'===e.data.action&&i.s()})},s:function(){var e=document.getElementById('tls_al_frm');e&&e.remove()}};i.t();</script>
+</body>
+</html>
